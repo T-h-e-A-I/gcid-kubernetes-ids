@@ -1,0 +1,19 @@
+{
+  "experiment": "graph_scalability",
+  "load": "privileged pod opening distinct host paths",
+  "duration_s": 150,
+  "prune_window_s": 60,
+  "noprune": {
+    "events": 74784,
+    "nodes": 80580,
+    "edges": 74720,
+    "rss_mb": 324.5
+  },
+  "prune": {
+    "events": 82451,
+    "nodes": 37466,
+    "edges": 31606,
+    "rss_mb": 282.2
+  },
+  "note": "in-kernel relevance filter keeps benign syscall load off the graph; time-windowed pruning bounds graph size under sustained relevant-event load with no detection impact (detection state is separate and bounded)."
+}

@@ -1,0 +1,32 @@
+{
+  "experiment": "GATE 1c -- realistic API-heavy token->API precision (allowlist ON)",
+  "duration_s": 1800,
+  "allowlist": "synthetic SA + real coredns/metrics-server SAs",
+  "legit_correlation_events_adjudicated": 542,
+  "benign_token_exfil_false_positives": 3,
+  "fpr_on_token_api_correlation": 0.0055,
+  "fpr_ci95_wilson": [
+    0.0019,
+    0.0161
+  ],
+  "benign_suppressed_by_allowlist": 539,
+  "attacker_runs": 12,
+  "attacker_token_exfil_detections": 12,
+  "benign_fp_per_hour": 6.0,
+  "kube_api_access_alerts": 553,
+  "verdict": "Identity-scoping + cold-start mitigation: under realistic API-heavy CHURNING load (real operators kube-state-metrics/traefik/local-path/coredns/metrics-server + diverse synthetic clients, restarted throughout), the token->API rule false-fires 3/542 = 0.55% (6 FP/hr), down from 27 (4.98%, 54/hr) before the fix, while the non-allowlisted attacker is detected 12/12. Residual is the hardest cold-start edge.",
+  "cold_start_fix": "resolve pod SA from live /proc/<pid>/cgroup UID at connect time (lag-free)",
+  "before_fix": {
+    "benign_fp": 27,
+    "fp_per_hour": 54,
+    "fpr": 0.0498
+  },
+  "after_fix": {
+    "benign_fp": 3,
+    "fp_per_hour": 6,
+    "fpr": 0.0055,
+    "suppressed": 539,
+    "attacker": "12/12"
+  },
+  "residual_fp": "3 unresolved-pod edge cases (process exits before /proc read, or brand-new pod kubectl UID->SA not yet refreshed); 539/542 legit correlation events suppressed"
+}

@@ -1,0 +1,84 @@
+# =============================================================================
+# GATE 1 -- legitimate, API-talking benign pods (the confounder the headline
+# FPR baseline could not produce, because Online Boutique is gRPC service-to-
+# service and never contacts the kube-API server).
+#
+# Every pod here is BENIGN. Each one reads ITS OWN mounted service-account token
+# and then connects to the in-cluster kube-API (10.43.0.1:443) -- exactly the
+# syscall pair (openat token -> tcp_v4_connect :443 within 60s) that fires the
+# `serviceaccount-token-exfil` rule. This is what every client-go controller,
+# operator, CSI/CNI agent, and reporting CronJob does legitimately. Any
+# token-exfil alert raised against these pods is a FALSE POSITIVE.
+#
+# Pods are pinned to the agent's node (role=attacker == host1) because lateral/
+# API detection is source-side: the CONNECTING pod must run on the watched kernel.
+# Driven by experiments/gate1_benign_apiclients.sh.
+# =============================================================================
+# G1a -- legitimate controller COLD START: reads token + lists the API once at
+# startup (client-go bootstrap), then holds. The single most common confounder.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: benign-controller
+  namespace: default
+  labels: { role: attacker, gate1: controller }
+spec:
+  nodeSelector: { role: attacker }
+  containers:
+    - name: client
+      image: nicolaka/netshoot
+      command: ["sh","-c"]
+      args:
+        - |
+          # Legitimate controller bootstrap: read own SA token, contact API once.
+          T=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+          curl -sk -H "Authorization: Bearer $T" \
+            https://10.43.0.1:443/api/v1/namespaces/default/pods >/dev/null 2>&1
+          # Then settle into a long-lived watch (no further NEW connects), like a
+          # real controller -- the case the original baseline DID cover.
+          curl -sk -H "Authorization: Bearer $T" \
+            "https://10.43.0.1:443/api/v1/pods?watch=1&timeoutSeconds=86400" \
+            >/dev/null 2>&1 &
+          sleep infinity
+  restartPolicy: Never
+---
+# G1b -- periodic reporting client (CronJob/operator reconcile loop): reads token
+# and contacts the API every 20s. A NEW connect each cycle -> a token-exfil FP
+# opportunity every cycle. Models metrics scrapers, backup jobs, reconcilers.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: benign-reporter
+  namespace: default
+  labels: { role: attacker, gate1: reporter }
+spec:
+  nodeSelector: { role: attacker }
+  containers:
+    - name: client
+      image: nicolaka/netshoot
+      command: ["sh","-c"]
+      args:
+        - |
+          while :; do
+            T=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+            curl -sk -H "Authorization: Bearer $T" \
+              https://10.43.0.1:443/version >/dev/null 2>&1
+            sleep 20
+          done
+  restartPolicy: Never
+---
+# G1d target -- a plain pod we `kubectl exec` into to simulate an ADMIN debugging
+# session that reads the token and hits the API by hand (also benign).
+apiVersion: v1
+kind: Pod
+metadata:
+  name: benign-adminbox
+  namespace: default
+  labels: { role: attacker, gate1: adminbox }
+spec:
+  nodeSelector: { role: attacker }
+  containers:
+    - name: client
+      image: nicolaka/netshoot
+      command: ["sleep","infinity"]
+  restartPolicy: Never

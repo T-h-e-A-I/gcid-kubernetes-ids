@@ -1,0 +1,21 @@
+{
+  "experiment": "traffic_impact",
+  "baseline_rps": 51.0,
+  "by_condition": {
+    "baseline": {
+      "rps_mean": 51.0,
+      "rps_std": 3.2,
+      "throughput_degradation_pct": 0.0,
+      "p50_ms_mean": 889.4,
+      "p95_ms_mean": 1144.0
+    },
+    "ebpf": {
+      "rps_mean": 49.3,
+      "rps_std": 0.8,
+      "throughput_degradation_pct": 3.42,
+      "p50_ms_mean": 925.3,
+      "p95_ms_mean": 1212.0
+    }
+  },
+  "source": "results/traffic_impact.csv"
+}

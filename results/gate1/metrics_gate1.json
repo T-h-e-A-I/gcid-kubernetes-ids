@@ -1,0 +1,20 @@
+{
+  "experiment": "GATE 1 \u2014 benign API-client confounder (token->API correlation FPR)",
+  "attacks_run": 0,
+  "driven_benign_sessions": 25,
+  "driven_token_exfil_false_positives": 25,
+  "fpr_on_token_api_correlation_driven": 1.0,
+  "fpr_ci95_wilson_driven": [
+    0.8668,
+    1
+  ],
+  "total_token_exfil_false_positives_all_benign": 40,
+  "fp_by_pod": {
+    "benign-adminbox(driven admin-debug)": 25,
+    "benign-reporter(periodic)": 10,
+    "unresolved/controller(cold-start+restart)": 5
+  },
+  "kube_api_access_alerts": 40,
+  "finding": "The serviceaccount-token-exfil rule false-fires on 100% (25/25) of legitimate API-client correlation sessions. The token-read->kube-API correlation does NOT by itself distinguish a credential-exfil attacker from any benign client-go controller/operator/CronJob/kubectl-exec: identical syscalls, identical alert detail ('token-read container -> kube-api 10.43.0.1:443'). The headline FPR 0% held only because Online Boutique never contacts the kube-API.",
+  "implication": "C3 'precision wall, not misconfiguration' is empirically FALSE as stated. The correlation is a high-RECALL signal but NOT precise without identity-scoping (service-account allowlist) or behavioral baselining."
+}

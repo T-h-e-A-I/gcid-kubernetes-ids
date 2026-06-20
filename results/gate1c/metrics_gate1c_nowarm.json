@@ -1,0 +1,21 @@
+{
+  "experiment": "GATE 1c -- realistic API-heavy token->API precision (allowlist ON)",
+  "duration_s": 1800,
+  "allowlist": "synthetic SA + real operators: kube-state-metrics, coredns, metrics-server, traefik, local-path-provisioner",
+  "legit_correlation_events_adjudicated": 542,
+  "benign_token_exfil_false_positives": 27,
+  "fpr_on_token_api_correlation": 0.0498,
+  "fpr_ci95_wilson": [
+    0.0345,
+    0.0715
+  ],
+  "benign_suppressed_by_allowlist": 515,
+  "attacker_runs": 12,
+  "attacker_token_exfil_detections": 12,
+  "benign_fp_per_hour": 54.0,
+  "kube_api_access_alerts": 553,
+  "verdict": "Allowlist LOGIC is precise: 515/515 RESOLVED benign API clients (incl. the real kube-state-metrics/traefik/coredns/metrics-server operators) suppressed, 0 mis-fires; attacker 12/12 detected. Residual 27 FP (4.98%, 54/hr) are ALL resolver cold-start (unresolved pod at first API call, scales with pod-churn) -- the bounded cold-cache class (cf. E5), closable by warming the pod->SA map on pod-create. Honest read: identity-scoping makes the allowlist decision precise; production-grade precision additionally needs to eliminate the cold-start window.",
+  "benign_fp_all_cold_start_unresolved": true,
+  "benign_fp_on_resolved_client": 0,
+  "churn_restarts_during_run": "aggressive (~1 pod restart / 180s) to stress the cold-start window"
+}

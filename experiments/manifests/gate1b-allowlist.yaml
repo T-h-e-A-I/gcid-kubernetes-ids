@@ -1,0 +1,77 @@
+# =============================================================================
+# GATE 1b -- identity-scoping fix for the token->API precision wall.
+#
+# Models a REALISTIC cluster: legitimate API clients run under DEDICATED service
+# accounts (as every well-built controller/operator/CronJob does), while a
+# COMPROMISED application pod runs under the default app service account (the
+# common reality -- app pods get a token auto-mounted they never legitimately
+# use). The agent is given --token-api-allowlist default/gate1-apiclient.
+#
+#   benign-*  -> SA gate1-apiclient  (ALLOWLISTED)  -> token-exfil SUPPRESSED
+#   gate1-attacker -> SA default     (NOT allowlisted) -> token-exfil FIRES
+#
+# Driven by experiments/gate1b_allowlist.sh.
+# =============================================================================
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: gate1-apiclient
+  namespace: default
+---
+# Legitimate periodic API client (reconcile loop) -- dedicated SA, allowlisted.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: benign-reporter
+  namespace: default
+  labels: { role: attacker, gate1: reporter }
+spec:
+  serviceAccountName: gate1-apiclient
+  nodeSelector: { role: attacker }
+  containers:
+    - name: client
+      image: nicolaka/netshoot
+      command: ["sh","-c"]
+      args:
+        - |
+          while :; do
+            T=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+            curl -sk -H "Authorization: Bearer $T" \
+              https://10.43.0.1:443/version >/dev/null 2>&1
+            sleep 20
+          done
+  restartPolicy: Never
+---
+# Legitimate admin-debug target -- dedicated SA, allowlisted. We kubectl exec in.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: benign-adminbox
+  namespace: default
+  labels: { role: attacker, gate1: adminbox }
+spec:
+  serviceAccountName: gate1-apiclient
+  nodeSelector: { role: attacker }
+  containers:
+    - name: client
+      image: nicolaka/netshoot
+      command: ["sleep","infinity"]
+  restartPolicy: Never
+---
+# COMPROMISED application pod -- DEFAULT service account (NOT allowlisted). This
+# is the credential-exfil attacker: an app pod that should never use the API but
+# reads its auto-mounted token and reaches the API server. token-exfil MUST fire.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: gate1-attacker
+  namespace: default
+  labels: { role: attacker, gate1: attacker }
+spec:
+  # no serviceAccountName -> uses "default" SA (not on the allowlist)
+  nodeSelector: { role: attacker }
+  containers:
+    - name: app
+      image: nicolaka/netshoot
+      command: ["sleep","infinity"]
+  restartPolicy: Never

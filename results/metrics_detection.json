@@ -1,0 +1,88 @@
+{
+  "experiment": "detection_effectiveness",
+  "trials_per_scenario": 1000,
+  "attacks_total": 8000,
+  "detected_tp": 7999,
+  "missed_fn": 1,
+  "attack_detection_rate_micro": 0.9999,
+  "attack_detection_rate_macro_mean": 0.9999,
+  "attack_detection_rate_macro_std": 0.0003,
+  "mean_latency_ms": 543.7,
+  "std_latency_ms": 457.6,
+  "p95_latency_ms": 1699.8,
+  "false_positives_benign_phase": 0,
+  "benign_events_total": 445,
+  "benign_window_s": 3600.0,
+  "fpr": 0.0,
+  "fpr_ci95": [
+    0.0,
+    0.006742
+  ],
+  "per_scenario": [
+    {
+      "scenario": "E1",
+      "trials": 1000,
+      "detected": 1000,
+      "detection_rate": 1.0,
+      "latency_ms_mean": 346.0,
+      "latency_ms_std": 79.7
+    },
+    {
+      "scenario": "E2",
+      "trials": 1000,
+      "detected": 1000,
+      "detection_rate": 1.0,
+      "latency_ms_mean": 1698.1,
+      "latency_ms_std": 152.7
+    },
+    {
+      "scenario": "E2b",
+      "trials": 1000,
+      "detected": 1000,
+      "detection_rate": 1.0,
+      "latency_ms_mean": 343.0,
+      "latency_ms_std": 87.3
+    },
+    {
+      "scenario": "E3",
+      "trials": 1000,
+      "detected": 1000,
+      "detection_rate": 1.0,
+      "latency_ms_mean": 336.9,
+      "latency_ms_std": 84.9
+    },
+    {
+      "scenario": "E4",
+      "trials": 1000,
+      "detected": 1000,
+      "detection_rate": 1.0,
+      "latency_ms_mean": 341.7,
+      "latency_ms_std": 83.7
+    },
+    {
+      "scenario": "E5",
+      "trials": 1000,
+      "detected": 999,
+      "detection_rate": 0.999,
+      "latency_ms_mean": 343.8,
+      "latency_ms_std": 83.5
+    },
+    {
+      "scenario": "L1",
+      "trials": 1000,
+      "detected": 1000,
+      "detection_rate": 1.0,
+      "latency_ms_mean": 609.6,
+      "latency_ms_std": 154.2
+    },
+    {
+      "scenario": "L2",
+      "trials": 1000,
+      "detected": 1000,
+      "detection_rate": 1.0,
+      "latency_ms_mean": 330.7,
+      "latency_ms_std": 86.4
+    }
+  ],
+  "source": "alerts"
+}

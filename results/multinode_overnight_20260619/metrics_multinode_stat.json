@@ -1,0 +1,17 @@
+{
+  "trials": 500,
+  "host1_src_alerts": 1000,
+  "host1_per_trial": 2.0,
+  "host2_leg2_alerts": 500,
+  "host2_leg2_rate": 1,
+  "host2_leg2_ci": [
+    1.0,
+    1
+  ],
+  "cross_node_chains": 396,
+  "cross_node_chain_rate": 0.792,
+  "cross_node_chain_ci": [
+    0.7564,
+    0.8276
+  ]
+}

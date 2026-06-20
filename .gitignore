@@ -1,0 +1,8 @@
+# don't commit raw run logs / large artifacts / secrets
+*.log
+*.jsonl
+**/agent.*.log
+**/alerts*.jsonl
+**/events.json
+*.kubeconfig
+.env

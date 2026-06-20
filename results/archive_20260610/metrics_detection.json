@@ -1,0 +1,73 @@
+{
+  "experiment": "detection_effectiveness",
+  "trials_per_scenario": 100,
+  "attacks_total": 700,
+  "detected_tp": 684,
+  "missed_fn": 16,
+  "attack_detection_rate_micro": 0.9771,
+  "attack_detection_rate_macro_mean": 0.9771,
+  "attack_detection_rate_macro_std": 0.056,
+  "mean_latency_ms": 634.9,
+  "std_latency_ms": 1134.8,
+  "p95_latency_ms": 1562.0,
+  "false_positives_benign_phase": 0,
+  "per_scenario": [
+    {
+      "scenario": "E1",
+      "trials": 100,
+      "detected": 100,
+      "detection_rate": 1.0,
+      "latency_ms_mean": 270.8,
+      "latency_ms_std": 42.8
+    },
+    {
+      "scenario": "E2",
+      "trials": 100,
+      "detected": 100,
+      "detection_rate": 1.0,
+      "latency_ms_mean": 1525.5,
+      "latency_ms_std": 65.9
+    },
+    {
+      "scenario": "E2b",
+      "trials": 100,
+      "detected": 100,
+      "detection_rate": 1.0,
+      "latency_ms_mean": 259.7,
+      "latency_ms_std": 42.5
+    },
+    {
+      "scenario": "E3",
+      "trials": 100,
+      "detected": 100,
+      "detection_rate": 1.0,
+      "latency_ms_mean": 247.4,
+      "latency_ms_std": 36.6
+    },
+    {
+      "scenario": "E4",
+      "trials": 100,
+      "detected": 100,
+      "detection_rate": 1.0,
+      "latency_ms_mean": 250.5,
+      "latency_ms_std": 32.9
+    },
+    {
+      "scenario": "L1",
+      "trials": 100,
+      "detected": 84,
+      "detection_rate": 0.84,
+      "latency_ms_mean": 1785.8,
+      "latency_ms_std": 2702.5
+    },
+    {
+      "scenario": "L2",
+      "trials": 100,
+      "detected": 100,
+      "detection_rate": 1.0,
+      "latency_ms_mean": 288.9,
+      "latency_ms_std": 256.8
+    }
+  ],
+  "source": "alerts"
+}

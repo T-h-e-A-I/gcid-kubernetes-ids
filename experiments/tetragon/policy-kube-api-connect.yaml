@@ -1,0 +1,30 @@
+# Tetragon TracingPolicy: detect a pod connecting to the kube-API server.
+# This is the SECOND half of the token->API chain. Like the token-read policy,
+# Tetragon emits it as an independent per-event observation — it fires for every
+# pod that connects to the API server. A single TracingPolicy cannot say "fire
+# only if THIS pod read its token within the last T seconds": the policy language
+# has no temporal cross-event correlation operator over (file-read, then connect).
+apiVersion: cilium.io/v1alpha1
+kind: TracingPolicy
+metadata:
+  name: "kube-api-connect"
+spec:
+  kprobes:
+  - call: "tcp_connect"
+    syscall: false
+    return: false
+    args:
+    - index: 0
+      type: "sock"
+    selectors:
+    - matchArgs:
+      - index: 0
+        operator: "DAddr"
+        values:
+        - "10.43.0.1/32"
+      - index: 0
+        operator: "DPort"
+        values:
+        - "443"
+      matchActions:
+      - action: Post

@@ -1,0 +1,30 @@
+{
+  "experiment": "GATE 4 -- detection x FP ROC vs correlation window",
+  "rows": [
+    {
+      "window_s": 15,
+      "benign_fp_no_allowlist": 75,
+      "benign_fp_with_allowlist": 0,
+      "benign_api_events": 84,
+      "fast_attacker_5s_detected": true,
+      "slow_attacker_Wplus30_detected": false
+    },
+    {
+      "window_s": 60,
+      "benign_fp_no_allowlist": 93,
+      "benign_fp_with_allowlist": 0,
+      "benign_api_events": 93,
+      "fast_attacker_5s_detected": true,
+      "slow_attacker_Wplus30_detected": false
+    },
+    {
+      "window_s": 300,
+      "benign_fp_no_allowlist": 176,
+      "benign_fp_with_allowlist": 0,
+      "benign_api_events": 178,
+      "fast_attacker_5s_detected": true,
+      "slow_attacker_Wplus30_detected": false
+    }
+  ],
+  "finding": "Without identity-scoping, benign FP rises with the window (75->93->176 over 15/60/300s) -- the precision/recall tradeoff. With service-account scoping, benign FP stays 0 across the same range, while the detection ceiling (max detectable attacker dwell) equals the window (fast 5s always caught; slow W+30 always missed). So identity-scoping DECOUPLES the window from precision: the window becomes a pure memory<->recall knob, and 60s is a design choice, not a cherry-picked sweet spot on a precision frontier."
+}

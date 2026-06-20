@@ -1,0 +1,40 @@
+{
+  "experiment": "workload_overhead",
+  "by_workload": {
+    "execve": {
+      "mean_ops_per_sec": {
+        "baseline": 856.0,
+        "ebpf": 896.0,
+        "falco": 815.0
+      },
+      "std_ops_per_sec": {
+        "baseline": 61.0,
+        "ebpf": 61.0,
+        "falco": 14.0
+      },
+      "overhead_pct_vs_baseline": {
+        "baseline": 0.0,
+        "ebpf": -4.67,
+        "falco": 4.81
+      }
+    },
+    "openat": {
+      "mean_ops_per_sec": {
+        "baseline": 382942.0,
+        "ebpf": 293234.0,
+        "falco": 205959.0
+      },
+      "std_ops_per_sec": {
+        "baseline": 9464.0,
+        "ebpf": 9561.0,
+        "falco": 3819.0
+      },
+      "overhead_pct_vs_baseline": {
+        "baseline": 0.0,
+        "ebpf": 23.43,
+        "falco": 46.22
+      }
+    }
+  },
+  "source": "results/workload_overhead_falco.csv"
+}

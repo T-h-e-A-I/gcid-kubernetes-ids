@@ -1,0 +1,55 @@
+{
+  "experiment": "GATE 3 -- token->API detection vs inter-event delay (correlation horizon)",
+  "trials_per_delay": 4,
+  "curve": [
+    {
+      "delay_s": 0,
+      "chain_rate": 1.0,
+      "api_connect_rate": 1.0
+    },
+    {
+      "delay_s": 30,
+      "chain_rate": 1.0,
+      "api_connect_rate": 1.0
+    },
+    {
+      "delay_s": 50,
+      "chain_rate": 1.0,
+      "api_connect_rate": 1.0
+    },
+    {
+      "delay_s": 55,
+      "chain_rate": 1.0,
+      "api_connect_rate": 1.0
+    },
+    {
+      "delay_s": 58,
+      "chain_rate": 1.0,
+      "api_connect_rate": 1.0
+    },
+    {
+      "delay_s": 62,
+      "chain_rate": 0.0,
+      "api_connect_rate": 1.0
+    },
+    {
+      "delay_s": 65,
+      "chain_rate": 0.0,
+      "api_connect_rate": 1.0
+    },
+    {
+      "delay_s": 75,
+      "chain_rate": 0.0,
+      "api_connect_rate": 1.0
+    },
+    {
+      "delay_s": 120,
+      "chain_rate": 0.0,
+      "api_connect_rate": 1.0
+    }
+  ],
+  "correlation_window_s": 60.0,
+  "max_delay_fully_detected_s": 58,
+  "min_delay_fully_evaded_s": 62,
+  "finding": "Chain detection holds below the ~60s correlation window and falls to 0 beyond it; the kube-api-access event still fires at every delay (the connect is SEEN, the CHAIN is LOST). So the 100/100 lead result is a FAST-attacker result: a read->sleep>60s->connect bypasses the chain alert. This is a total bypass of the chain rule, not a 'downgrade'. Mitigation/trade: lengthening the window trades memory + benign-collision (FP) for slow-chain recall; an unbounded horizon is infeasible -- the irreducible limit motivating Paper 2's learning channel."
+}

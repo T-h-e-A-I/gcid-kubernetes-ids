@@ -1,0 +1,16 @@
+{
+  "experiment": "GATE 1b -- service-account allowlist precision fix",
+  "allowlist": "default/gate1-apiclient",
+  "benign_driven_sessions": 25,
+  "benign_token_exfil_false_positives_allowlist_ON": 1,
+  "benign_suppressed_by_allowlist": 31,
+  "attacker_attempts": 5,
+  "attacker_token_exfil_detections": 5,
+  "gate1_baseline_benign_FP_allowlist_OFF": 40,
+  "verdict": "FIX WORKS: service-account allowlisting suppresses 33/33 resolved benign API clients while the non-allowlisted compromised pod is detected 5/5. Benign FP 40->1; the single residual is a resolver cold-start artifact (pre-warm, unresolved pod), not an allowlist failure. Residual: compromise of an ALREADY-AUTHORISED API client is invisible at the syscall layer -> motivates learning-based Paper 2.",
+  "benign_resolved_sessions_suppressed": 33,
+  "residual_fp_is_cold_start_artifact": true,
+  "residual_fp_detail": "1 FP at agent t+0.0s, 12.9s BEFORE resolver warmed (pod unresolved '?'); same bounded cold-cache class as the E5 miss; mitigable by warming pod->SA map on pod-create",
+  "fp_reduction": "40 -> 1 (97.5%); 0 on any RESOLVED benign client",
+  "attacker_detection_rate": "5/5 (compromised pod on non-allowlisted default SA)"
+}

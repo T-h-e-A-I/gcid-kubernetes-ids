@@ -1,0 +1,45 @@
+# A REAL client-go operator for the GATE 1c benign population: kube-state-metrics
+# continuously LISTs/WATCHes the whole API (the Prometheus-ecosystem operator the
+# v3 reviewers named). Genuine, recognizable, API-heavy benign traffic — not a
+# synthetic curl loop. Its SA (default/kube-state-metrics) is allowlisted by gate1c.
+apiVersion: v1
+kind: ServiceAccount
+metadata: { name: kube-state-metrics, namespace: default }
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata: { name: kube-state-metrics-g1c }
+rules:
+  - apiGroups: [""]
+    resources: ["pods","services","endpoints","configmaps","secrets","nodes","namespaces","replicationcontrollers","resourcequotas","persistentvolumeclaims"]
+    verbs: ["list","watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments","replicasets","statefulsets","daemonsets"]
+    verbs: ["list","watch"]
+  - apiGroups: ["batch"]
+    resources: ["jobs","cronjobs"]
+    verbs: ["list","watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata: { name: kube-state-metrics-g1c }
+roleRef: { apiGroup: rbac.authorization.k8s.io, kind: ClusterRole, name: kube-state-metrics-g1c }
+subjects:
+  - { kind: ServiceAccount, name: kube-state-metrics, namespace: default }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: kube-state-metrics, namespace: default, labels: { gate1c: real-operator } }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: kube-state-metrics } }
+  template:
+    metadata: { labels: { app: kube-state-metrics, role: attacker } }
+    spec:
+      serviceAccountName: kube-state-metrics
+      nodeSelector: { role: attacker }
+      containers:
+        - name: ksm
+          image: registry.k8s.io/kube-state-metrics/kube-state-metrics:v2.10.1
+          args: ["--resources=pods,deployments,services,configmaps,secrets,nodes,namespaces,jobs,cronjobs,statefulsets,daemonsets,replicasets"]
+          ports: [ { containerPort: 8080 } ]

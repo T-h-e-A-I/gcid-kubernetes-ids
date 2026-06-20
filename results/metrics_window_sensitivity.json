@@ -1,0 +1,152 @@
+{
+  "experiment": "window_sensitivity",
+  "note": "Detection rate as a function of the scorer action-to-alert match window. Separates genuine misses from late detections (scorer artifacts). At >=30s window every one of the 700 attacks is detected; the 16 'misses' at the 10s operating point are all L1 multi-target-scan connects that alert late.",
+  "match_window_default_s": 10.0,
+  "overall": [
+    {
+      "window_s": 1,
+      "tp": 563,
+      "total": 700,
+      "adr": 0.8043
+    },
+    {
+      "window_s": 2,
+      "tp": 666,
+      "total": 700,
+      "adr": 0.9514
+    },
+    {
+      "window_s": 3,
+      "tp": 669,
+      "total": 700,
+      "adr": 0.9557
+    },
+    {
+      "window_s": 5,
+      "tp": 670,
+      "total": 700,
+      "adr": 0.9571
+    },
+    {
+      "window_s": 8,
+      "tp": 678,
+      "total": 700,
+      "adr": 0.9686
+    },
+    {
+      "window_s": 10,
+      "tp": 684,
+      "total": 700,
+      "adr": 0.9771
+    },
+    {
+      "window_s": 15,
+      "tp": 691,
+      "total": 700,
+      "adr": 0.9871
+    },
+    {
+      "window_s": 20,
+      "tp": 695,
+      "total": 700,
+      "adr": 0.9929
+    },
+    {
+      "window_s": 30,
+      "tp": 700,
+      "total": 700,
+      "adr": 1.0
+    },
+    {
+      "window_s": 45,
+      "tp": 700,
+      "total": 700,
+      "adr": 1.0
+    },
+    {
+      "window_s": 60,
+      "tp": 700,
+      "total": 700,
+      "adr": 1.0
+    }
+  ],
+  "L1": [
+    {
+      "window_s": 1,
+      "detected": 65,
+      "trials": 100,
+      "rate": 0.65,
+      "latency_p95_ms": 564.0
+    },
+    {
+      "window_s": 2,
+      "detected": 67,
+      "trials": 100,
+      "rate": 0.67,
+      "latency_p95_ms": 629.0
+    },
+    {
+      "window_s": 3,
+      "detected": 69,
+      "trials": 100,
+      "rate": 0.69,
+      "latency_p95_ms": 721.0
+    },
+    {
+      "window_s": 5,
+      "detected": 70,
+      "trials": 100,
+      "rate": 0.7,
+      "latency_p95_ms": 1606.0
+    },
+    {
+      "window_s": 8,
+      "detected": 78,
+      "trials": 100,
+      "rate": 0.78,
+      "latency_p95_ms": 6530.0
+    },
+    {
+      "window_s": 10,
+      "detected": 84,
+      "trials": 100,
+      "rate": 0.84,
+      "latency_p95_ms": 8067.0
+    },
+    {
+      "window_s": 15,
+      "detected": 91,
+      "trials": 100,
+      "rate": 0.91,
+      "latency_p95_ms": 10939.0
+    },
+    {
+      "window_s": 20,
+      "detected": 95,
+      "trials": 100,
+      "rate": 0.95,
+      "latency_p95_ms": 13037.0
+    },
+    {
+      "window_s": 30,
+      "detected": 100,
+      "trials": 100,
+      "rate": 1.0,
+      "latency_p95_ms": 18137.0
+    },
+    {
+      "window_s": 45,
+      "detected": 100,
+      "trials": 100,
+      "rate": 1.0,
+      "latency_p95_ms": 18137.0
+    },
+    {
+      "window_s": 60,
+      "detected": 100,
+      "trials": 100,
+      "rate": 1.0,
+      "latency_p95_ms": 18137.0
+    }
+  ]
+}

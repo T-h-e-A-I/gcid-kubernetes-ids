@@ -1,0 +1,25 @@
+{
+  "experiment": "adversarial_robustness_R2_R4",
+  "R2_bosc_padding": {
+    "vector": "nsenter precursor-free pidfd+setns (max padding)",
+    "detected": true,
+    "rule": "nsenter-bosc",
+    "verdict": "no evasion - setns-anchored"
+  },
+  "R3_slow_chain": {
+    "vector": "token read then connect after 65s (>60s window)",
+    "token_exfil_chain": false,
+    "kube_api_access": true,
+    "window_s": 60,
+    "verdict": "downgrade not evasion - kube-api-access fires unconditionally"
+  },
+  "R4_renamed_host_binary": {
+    "vector": "copy host binary to renamed host path, exec",
+    "detected": true,
+    "rules": [
+      "file-boundary",
+      "host-binary-exec"
+    ],
+    "verdict": "no evasion - host-boundary-prefix-anchored"
+  }
+}

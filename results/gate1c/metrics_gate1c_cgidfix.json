@@ -1,0 +1,18 @@
+{
+  "experiment": "GATE 1c -- realistic API-heavy token->API precision (allowlist ON)",
+  "duration_s": 600,
+  "allowlist": "synthetic SA + real coredns/metrics-server SAs",
+  "legit_correlation_events_adjudicated": 201,
+  "benign_token_exfil_false_positives": 18,
+  "fpr_on_token_api_correlation": 0.0896,
+  "fpr_ci95_wilson": [
+    0.0574,
+    0.1371
+  ],
+  "benign_suppressed_by_allowlist": 183,
+  "attacker_runs": 5,
+  "attacker_token_exfil_detections": 5,
+  "benign_fp_per_hour": 108.0,
+  "kube_api_access_alerts": 206,
+  "verdict": "benign_FP=18 attacker_det=5 -- inspect"
+}

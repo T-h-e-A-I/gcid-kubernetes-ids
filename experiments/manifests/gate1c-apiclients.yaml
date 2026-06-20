@@ -1,0 +1,101 @@
+# =============================================================================
+# GATE 1c -- DIVERSE, realistic API-talking benign clients for the precision
+# re-run (v3 reviewers: GATE 1b's 25 curated curls were too small/curated; the
+# 0/445 FPR ran on a workload that never calls the API). All under a dedicated,
+# ALLOWLISTED service account, so a precise detector must suppress them while
+# still catching the non-allowlisted attacker. Patterns chosen to span real
+# client-go behaviors: tight reconcile loop, periodic scraper, bursty job,
+# steady SDK client.
+# =============================================================================
+apiVersion: v1
+kind: ServiceAccount
+metadata: { name: gate1c-apiclient, namespace: default }
+---
+# Operator/controller reconcile loop: frequent list/watch -> many NEW API connects.
+apiVersion: v1
+kind: Pod
+metadata: { name: g1c-reconciler, namespace: default, labels: { role: attacker, gate1c: reconciler } }
+spec:
+  serviceAccountName: gate1c-apiclient
+  nodeSelector: { role: attacker }
+  containers:
+    - name: c
+      image: nicolaka/netshoot
+      command: ["sh","-c"]
+      args:
+        - |
+          while :; do
+            T=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+            curl -sk -H "Authorization: Bearer $T" https://10.43.0.1:443/api/v1/namespaces/default/pods >/dev/null 2>&1
+            sleep 8
+          done
+  restartPolicy: Never
+---
+# Metrics scraper (Prometheus-like): periodic /version + /metrics endpoints.
+apiVersion: v1
+kind: Pod
+metadata: { name: g1c-scraper, namespace: default, labels: { role: attacker, gate1c: scraper } }
+spec:
+  serviceAccountName: gate1c-apiclient
+  nodeSelector: { role: attacker }
+  containers:
+    - name: c
+      image: nicolaka/netshoot
+      command: ["sh","-c"]
+      args:
+        - |
+          while :; do
+            T=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+            curl -sk -H "Authorization: Bearer $T" https://10.43.0.1:443/metrics >/dev/null 2>&1
+            sleep 15
+          done
+  restartPolicy: Never
+---
+# Bursty job (CI/CronJob-like): bursts of API calls then idles.
+apiVersion: v1
+kind: Pod
+metadata: { name: g1c-job, namespace: default, labels: { role: attacker, gate1c: job } }
+spec:
+  serviceAccountName: gate1c-apiclient
+  nodeSelector: { role: attacker }
+  containers:
+    - name: c
+      image: nicolaka/netshoot
+      command: ["sh","-c"]
+      args:
+        - |
+          while :; do
+            T=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+            for i in 1 2 3 4 5; do curl -sk -H "Authorization: Bearer $T" https://10.43.0.1:443/version >/dev/null 2>&1; done
+            sleep 40
+          done
+  restartPolicy: Never
+---
+# Steady SDK client: long-ish poll then reconnect.
+apiVersion: v1
+kind: Pod
+metadata: { name: g1c-sdk, namespace: default, labels: { role: attacker, gate1c: sdk } }
+spec:
+  serviceAccountName: gate1c-apiclient
+  nodeSelector: { role: attacker }
+  containers:
+    - name: c
+      image: nicolaka/netshoot
+      command: ["sh","-c"]
+      args:
+        - |
+          while :; do
+            T=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+            curl -sk -H "Authorization: Bearer $T" "https://10.43.0.1:443/api/v1/namespaces/default/configmaps" >/dev/null 2>&1
+            sleep 25
+          done
+  restartPolicy: Never
+---
+# The attacker: compromised app pod on the DEFAULT (non-allowlisted) SA.
+apiVersion: v1
+kind: Pod
+metadata: { name: g1c-attacker, namespace: default, labels: { role: attacker, gate1c: attacker } }
+spec:
+  nodeSelector: { role: attacker }
+  containers: [ { name: app, image: nicolaka/netshoot, command: ["sleep","infinity"] } ]
+  restartPolicy: Never

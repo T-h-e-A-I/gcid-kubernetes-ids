@@ -1,0 +1,28 @@
+{
+  "experiment": "traffic_impact",
+  "baseline_rps": 48.6,
+  "by_condition": {
+    "baseline": {
+      "rps_mean": 48.6,
+      "rps_std": 2.2,
+      "throughput_degradation_pct": 0.0,
+      "p50_ms_mean": 939.0,
+      "p95_ms_mean": 1274.0
+    },
+    "ebpf": {
+      "rps_mean": 45.1,
+      "rps_std": 1.9,
+      "throughput_degradation_pct": 7.03,
+      "p50_ms_mean": 1019.3,
+      "p95_ms_mean": 1288.0
+    },
+    "falco": {
+      "rps_mean": 49.2,
+      "rps_std": 1.2,
+      "throughput_degradation_pct": -1.4,
+      "p50_ms_mean": 928.9,
+      "p95_ms_mean": 1192.0
+    }
+  },
+  "source": "results/traffic_impact_falco.csv"
+}

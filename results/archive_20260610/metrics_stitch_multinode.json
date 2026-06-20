@@ -1,0 +1,31 @@
+{
+  "nodes": [
+    "host1",
+    "host2"
+  ],
+  "connect_alerts": 3,
+  "chains": [
+    {
+      "leg1": {
+        "ts": 1781119356.6342719,
+        "src_pod": "attacker-mn",
+        "src_node": "host1",
+        "dst_ip": "10.42.1.14",
+        "dst_port": 8080,
+        "dst_pod": "relay-mn",
+        "dst_node": "host2"
+      },
+      "leg2": {
+        "ts": 1781119357.8581655,
+        "src_pod": "relay-mn",
+        "src_node": "host2",
+        "dst_ip": "10.43.47.87",
+        "dst_port": 5432,
+        "dst_pod": null,
+        "dst_node": null
+      },
+      "cross_node": true
+    }
+  ],
+  "cross_node_chains": 1
+}

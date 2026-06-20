@@ -1,0 +1,43 @@
+# Privileged "attacker" pod for the container-escape scenarios (E1-E4).
+# Mounts the host root filesystem at /host and runs privileged, simulating a
+# severely misconfigured workload (the insecure-configuration escape category).
+#
+# Used by experiments/attack_escape.sh. The eBPF agent should flag:
+#   - openat under /host/...           (file-boundary rule)
+#   - mount()                          (privileged-mount rule)
+#   - setns(CLONE_NEWNS) after         (nsenter-bosc rule, E3)
+#     openat(/proc/1/ns/mnt)
+#   - execve of a /host/... binary     (host-binary-exec rule, E4 stand-in)
+apiVersion: v1
+kind: Pod
+metadata:
+  name: attacker-escape
+  labels:
+    role: attacker
+    scenario: escape
+spec:
+  # Pin to the node where the eBPF agent runs. eBPF observes only its OWN
+  # kernel, so in a multi-node cluster an unpinned attacker pod can land on a
+  # different node and the agent never sees its syscalls (no detections). The
+  # agent's node is labelled role=attacker; on a true single-node cluster this
+  # selector is harmless (it matches the only node).
+  nodeSelector:
+    role: attacker
+  hostPID: true                 # see host PIDs (needed for nsenter --target 1)
+  containers:
+    - name: attacker-escape
+      # nicolaka/netshoot ships nsenter, curl, nc, etc. pre-installed, so the
+      # scenarios need NO runtime `apt-get install` (which previously failed /
+      # flooded the agent with /etc/passwd reads -- plan P2).
+      image: nicolaka/netshoot
+      command: ["sleep", "infinity"]
+      securityContext:
+        privileged: true        # the misconfiguration under test
+      volumeMounts:
+        - name: host-root
+          mountPath: /host       # host filesystem exposed inside the container
+  volumes:
+    - name: host-root
+      hostPath:
+        path: /
+  restartPolicy: Never

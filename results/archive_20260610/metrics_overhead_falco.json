@@ -1,0 +1,20 @@
+{
+  "experiment": "agent_overhead",
+  "comparator": "falco",
+  "ebpf": {
+    "cpu_mean": 0.05,
+    "cpu_std": 0.22,
+    "rss_kb_mean": 238244.0
+  },
+  "falco": {
+    "cpu_mean": 63.23,
+    "cpu_std": 15.63,
+    "rss_kb_mean": 119395.2
+  },
+  "cpu_reduction_pct": 99.9,
+  "welch_t_pvalue": 0.0,
+  "n_samples": {
+    "ebpf": 60,
+    "falco": 60
+  }
+}

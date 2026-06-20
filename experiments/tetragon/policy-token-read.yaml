@@ -1,0 +1,27 @@
+# Tetragon TracingPolicy: detect a pod reading its service-account token.
+# This is the FIRST half of the token->API chain. Note: Tetragon emits this as
+# an independent per-event observation — it fires for EVERY pod that reads its
+# token (benign controllers included), exactly like Falco's bare "read token"
+# rule. There is no operator in the TracingPolicy language to condition this on
+# a LATER network connect by the same pod.
+apiVersion: cilium.io/v1alpha1
+kind: TracingPolicy
+metadata:
+  name: "sa-token-read"
+spec:
+  kprobes:
+  - call: "security_file_permission"
+    syscall: false
+    return: false
+    args:
+    - index: 0
+      type: "file"
+    selectors:
+    - matchArgs:
+      - index: 0
+        operator: "Postfix"
+        values:
+        - "/token"
+        - "/token"
+      matchActions:
+      - action: Post

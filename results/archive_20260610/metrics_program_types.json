@@ -1,0 +1,15 @@
+{
+  "experiment": "program_types",
+  "mean_ops_per_sec": {
+    "base": 310169.0,
+    "kprobe": 270461.0,
+    "tracepoint": 271114.0,
+    "raw_tracepoint": 283754.0
+  },
+  "overhead_pct_vs_base": {
+    "base": 0.0,
+    "kprobe": 12.8,
+    "tracepoint": 12.6,
+    "raw_tracepoint": 8.5
+  }
+}

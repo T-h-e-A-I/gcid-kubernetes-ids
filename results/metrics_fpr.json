@@ -1,0 +1,13 @@
+{
+  "experiment": "false_positive_rate",
+  "note": "FPR denominator added per roadmap A2. Benign-phase events = agent-processed events in [first_attack-120s, first_attack). Source: results/archive_20260610/{events,ground_truth,alerts}.jsonl (events/gt/alerts timestamp-aligned, verified 2026-06-17).",
+  "false_positives_benign_phase": 0,
+  "benign_events_total": 79,
+  "benign_window_s": 120.0,
+  "fpr": 0.0,
+  "fpr_ci95_rule_of_three": [
+    0.0,
+    0.037975
+  ],
+  "interpretation": "0 false positives over 79 benign events. 95% CI [0, 3.8%] (rule of three). The CI upper bound is LOOSE because N is small; to substantiate an 'FPR < 1%' claim, N>=300 benign events are required -> see roadmap B4 (extended benign volume)."
+}

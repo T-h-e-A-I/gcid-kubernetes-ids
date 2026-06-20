@@ -1,0 +1,65 @@
+# "Compromised insider" pod for the lateral-movement scenarios (L1-L2).
+# A normal (unprivileged) pod from which we run internal scanning / connects
+# against the Online Boutique ClusterIPs and an internal target DB pod.
+#
+# Used by experiments/attack_lateral.sh. The eBPF agent should flag the
+# outbound connections into the Pod/Service CIDR (cross-namespace-connect rule)
+# and any Kube-API access (kube-api-access rule).
+# NB: the `attacker` namespace is created idempotently by attack_lateral.sh
+# (NOT here) so the per-trial `kubectl delete -f` cycle does not churn the
+# namespace (ns termination is slow); only the pod below is recreated per trial.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: attacker-lateral
+  namespace: attacker          # compromised pod lives in its OWN namespace, so
+                               # its connects to default-ns targets are GENUINELY
+                               # cross-namespace (matches the threat model and
+                               # the namespace-aware cross-namespace-connect rule)
+  labels:
+    role: attacker
+    scenario: lateral
+spec:
+  # Pin to the agent's node (role=attacker). Lateral detection is source-side,
+  # so the CONNECTING pod must run on the kernel the agent watches; otherwise
+  # the connect fires on another node and this agent never sees it. Harmless on
+  # a true single-node cluster.
+  nodeSelector:
+    role: attacker
+  containers:
+    - name: attacker-lateral
+      # Pre-tooled image (nmap, nc, curl) -> no runtime apt installs (plan P2).
+      image: nicolaka/netshoot
+      command: ["sleep", "infinity"]
+  restartPolicy: Never
+---
+# Internal "database" target the compromised pod will scan/connect to,
+# simulating an unexposed high-value service.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: target-db
+  labels:
+    role: target
+    app: internal-db
+spec:
+  containers:
+    - name: target-db
+      image: postgres:15-alpine
+      env:
+        - name: POSTGRES_PASSWORD
+          value: "labonly"      # lab-only throwaway credential
+      ports:
+        - containerPort: 5432
+  restartPolicy: Never
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: internal-db
+spec:
+  selector:
+    app: internal-db
+  ports:
+    - port: 5432
+      targetPort: 5432

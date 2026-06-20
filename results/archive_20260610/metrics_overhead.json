@@ -1,0 +1,19 @@
+{
+  "experiment": "agent_overhead",
+  "ebpf": {
+    "cpu_mean": 0.0,
+    "cpu_std": 0.0,
+    "rss_kb_mean": 238624.0
+  },
+  "auditd": {
+    "cpu_mean": 0.08,
+    "cpu_std": 0.28,
+    "rss_kb_mean": 12800.0
+  },
+  "cpu_reduction_pct": 100.0,
+  "welch_t_pvalue": 0.024055,
+  "n_samples": {
+    "ebpf": 60,
+    "auditd": 60
+  }
+}

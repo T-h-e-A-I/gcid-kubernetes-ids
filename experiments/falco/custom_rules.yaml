@@ -1,0 +1,145 @@
+# =============================================================================
+# custom_rules.yaml -- Task 2.1 Falco head-to-head: idiomatic operator rules
+# layered on Falco's STOCK ruleset (falco_rules.yaml).
+# -----------------------------------------------------------------------------
+# WHY THESE EXIST (fairness, documented like the auditd `auditctl` ruleset in
+# Ch.5): the first run showed Falco's STOCK rules do NOT fire on our scenarios,
+# because the attacker reaches host resources through a hostPath mount at /host
+# (so paths are /host/etc/shadow, /host/bin/..., not the literal /etc/shadow,
+# /bin/... the stock macros match) and "Contact K8S API Server" needs an
+# operator-populated API-IP list (empty by default). A competent operator
+# deploying Falco on such a node WOULD write host-mount-aware rules. We add them
+# so the comparison is "a well-configured Falco", not a strawman. Every rule is
+# documented here and lifted into the thesis appendix.
+#
+# Secondary finding worth a sentence in Ch.6: stock Falco's literal-path matching
+# is evaded by the hostPath indirection, whereas this work's file-boundary rule
+# reasons about the mount/inode boundary, not the path string.
+#
+# Mapping to thesis expect_rule (analysis/falco_adapter.py RULE_MAP):
+#   E1  -> Read sensitive host file via mount      -> file-boundary
+#   E2b -> Contact Kube API server from container  -> kube-api-access
+#   E3  -> Namespace switch via setns              -> nsenter-bosc
+#   E4  -> Tamper or execute host binary via mount -> host-binary-exec
+#   L1/L2 -> Unexpected outbound connection        -> cross-namespace-connect
+#
+# E2 (the read-token -> reach-API CHAIN) has NO rule here ON PURPOSE: Falco
+# cannot express that cgroup-correlated join natively. That gap is the result.
+# The "Read SA token (illustrative)" rule below shows WHY a per-event token rule
+# is useless (it fires on every pod) -- it is intentionally NOT mapped.
+# =============================================================================
+
+# ---- shared lists / macros --------------------------------------------------
+- list: thesis_attacker_pods
+  items: ["attacker-lateral", "attacker-escape"]
+
+# Kubernetes API server endpoint in this cluster (k3s default service IP).
+- macro: thesis_kube_api_endpoint
+  condition: (fd.sip="10.43.0.1" and fd.sport=443)
+
+# Outbound TCP connect from a container (return leg carries the destination).
+- macro: thesis_outbound
+  condition: (evt.type=connect and evt.dir=< and fd.typechar=4 and fd.net != "127.0.0.0/8")
+
+# ---- E1: read of a sensitive host file via the /host mount -------------------
+- macro: thesis_host_sensitive_file
+  condition: >
+    (fd.name pmatch (/host/etc/shadow, /host/etc/gshadow, /host/etc/sudoers,
+                     /host/etc/ssh, /host/root, /host/etc/kubernetes))
+- rule: Read sensitive host file via mount (thesis)
+  desc: A container reads a sensitive host file exposed through a hostPath mount (E1).
+  condition: open_read and container and thesis_host_sensitive_file
+  output: >
+    Sensitive host file read via mount (pod=%k8s.pod.name ns=%k8s.ns.name
+    cid=%container.id proc=%proc.name file=%fd.name)
+  priority: WARNING
+  tags: [filesystem, thesis]
+
+# ---- E3: namespace switch via setns (nsenter-style escape) -------------------
+- rule: Namespace switch via setns from container (thesis)
+  desc: A non-runtime process in a container changes namespaces (nsenter-style escape, E3).
+  condition: >
+    evt.type=setns and container
+    and not proc.name startswith "runc"
+    and not proc.name in (containerd-shim, containerd-shim-runc-v2, containerd,
+                          dockerd, kubelet, pause, systemd, exe)
+  output: >
+    Namespace switch via setns (pod=%k8s.pod.name ns=%k8s.ns.name
+    cid=%container.id proc=%proc.name)
+  priority: WARNING
+  tags: [process, thesis]
+
+# ---- E4: tamper with / execute a host binary via the /host mount -------------
+- rule: Tamper or execute host binary via mount (thesis)
+  desc: A container writes to or executes a binary on the host filesystem via a hostPath mount (E4).
+  condition: >
+    container and
+    ( (open_write and fd.name startswith "/host/"
+        and not fd.name pmatch (/host/proc, /host/sys, /host/dev))
+      or (evt.type in (execve, execveat) and proc.exepath startswith "/host/") )
+  output: >
+    Host binary tamper/exec via mount (pod=%k8s.pod.name ns=%k8s.ns.name
+    cid=%container.id proc=%proc.name file=%fd.name exe=%proc.exepath)
+  priority: WARNING
+  tags: [filesystem, process, thesis]
+
+# ---- E2b: container contacts the Kube API server ----------------------------
+# Per-event detection: fires for ANY pod that talks to the API (which most do),
+# so it is high-noise -- the honest counterpart to the illustrative token rule.
+- rule: Contact Kube API server from container (thesis)
+  desc: A container opens a connection to the Kubernetes API server (E2b).
+  condition: thesis_outbound and container and thesis_kube_api_endpoint
+  output: >
+    Contact Kube API from container (pod=%k8s.pod.name ns=%k8s.ns.name
+    cid=%container.id proc=%proc.name dst=%fd.sip:%fd.sport)
+  priority: WARNING
+  tags: [network, thesis]
+
+# ---- L1/L2: idiomatic east-west monitoring ----------------------------------
+# Outbound connect from a known attacker pod, EXCLUDING the API endpoint (that
+# is E2b above) so the scenarios map to distinct rules.
+- rule: Unexpected outbound connection (thesis)
+  desc: An outbound TCP connect from a monitored attacker pod (L1 scan / L2 cross-ns).
+  condition: >
+    thesis_outbound and container
+    and k8s.pod.name in (thesis_attacker_pods)
+    and not thesis_kube_api_endpoint
+  output: >
+    Unexpected outbound connection (pod=%k8s.pod.name ns=%k8s.ns.name
+    cid=%container.id proc=%proc.name dst=%fd.sip:%fd.sport)
+  priority: WARNING
+  tags: [network, thesis]
+
+# ---- ILLUSTRATIVE per-event SA-token read (NOT a detection, NOT mapped) -----
+# Demonstrates the E2 argument empirically: this fires on EVERY pod that reads
+# its token (traefik, metrics-server, coredns, ...), so as a detection it is
+# pure noise. The adapter does NOT map this rule -> E2 stays a Falco miss.
+- rule: Read SA token (illustrative)
+  desc: >
+    ILLUSTRATIVE ONLY. Per-event service-account token read. Cannot express the
+    exfil CHAIN (same container later reaches the Kube-API); fires for every
+    legitimate pod, so it is unusable as a detection. Intentionally unmapped.
+  condition: open_read and fd.name contains "serviceaccount/token"
+  output: >
+    SA token read [illustrative, over-fires] (pod=%k8s.pod.name
+    cid=%container.id proc=%proc.name file=%fd.name)
+  priority: NOTICE
+  tags: [thesis, illustrative]
+
+# ---- E5: privileged mount from a container (added for the 8-scenario run) ----
+# A competent operator monitoring privileged pods would flag a mount() issued by
+# a container workload. We include the new mount-API syscalls too (move_mount/
+# fsmount) so Falco is given the SAME coverage GCID has after its A10 fix -- a
+# fair test of the detection model, not of which syscalls each tool happens to
+# instrument.
+- rule: Privileged mount from container (thesis)
+  desc: A container workload process issues a mount syscall (privileged-mount escape, E5).
+  condition: >
+    evt.type in (mount, move_mount, fsmount) and evt.dir=<
+    and container
+    and not proc.name in (runc, containerd, containerd-shim, dockerd, kubelet)
+  output: >
+    Privileged mount from container (pod=%k8s.pod.name ns=%k8s.ns.name
+    cid=%container.id proc=%proc.name evt=%evt.type)
+  priority: WARNING
+  tags: [thesis, mount]

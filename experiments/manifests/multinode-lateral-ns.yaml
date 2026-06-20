@@ -1,0 +1,77 @@
+# Multi-node + cross-NAMESPACE lateral topology (current A7-consistent setup).
+# Each tier lives in its own namespace so every hop crosses a namespace boundary
+# (the A7 namespace-aware rule suppresses only same-namespace connects), AND the
+# pivot crosses a NODE boundary (separate kernels => separate eBPF agents):
+#   attacker-mn (ns mn-attacker, Host-1) --leg1--> relay-mn (ns mn-relay, Host-2)
+#                                          --leg2--> internal-db (ns mn-victim, Host-2)
+# leg1 seen by Host-1 agent (cross-ns), leg2 seen by Host-2 agent (cross-ns);
+# stitch_multinode.py joins them into one cross-node chain.
+apiVersion: v1
+kind: Namespace
+metadata: {name: mn-attacker}
+---
+apiVersion: v1
+kind: Namespace
+metadata: {name: mn-relay}
+---
+apiVersion: v1
+kind: Namespace
+metadata: {name: mn-victim}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: attacker-mn
+  namespace: mn-attacker
+  labels: {role: attacker, scenario: lateral-mn}
+spec:
+  nodeSelector: {role: attacker}
+  containers:
+    - name: attacker-mn
+      image: nicolaka/netshoot
+      command: ["sleep", "infinity"]
+  restartPolicy: Never
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: relay-mn
+  namespace: mn-relay
+  labels: {role: target, app: relay-mn, scenario: lateral-mn}
+spec:
+  nodeSelector: {role: target}
+  containers:
+    - name: relay-mn
+      image: nicolaka/netshoot
+      command: ["sleep", "infinity"]
+      ports: [{containerPort: 8080}]
+  restartPolicy: Never
+---
+apiVersion: v1
+kind: Service
+metadata: {name: relay-mn, namespace: mn-relay}
+spec:
+  selector: {app: relay-mn}
+  ports: [{port: 8080, targetPort: 8080}]
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: target-db
+  namespace: mn-victim
+  labels: {role: target, app: internal-db, scenario: lateral-mn}
+spec:
+  nodeSelector: {role: target}
+  containers:
+    - name: target-db
+      image: postgres:15-alpine
+      env: [{name: POSTGRES_PASSWORD, value: "labonly"}]
+      ports: [{containerPort: 5432}]
+  restartPolicy: Never
+---
+apiVersion: v1
+kind: Service
+metadata: {name: internal-db, namespace: mn-victim}
+spec:
+  selector: {app: internal-db}
+  ports: [{port: 5432, targetPort: 5432}]

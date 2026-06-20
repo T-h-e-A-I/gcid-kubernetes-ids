@@ -1,0 +1,100 @@
+# Multi-node lateral-movement topology (todo/plan_multinode.md, runs C1/C2).
+#
+# Pins pods to specific nodes via nodeSelector so the attack PROVABLY crosses a
+# node boundary (separate kernels => separate eBPF agents):
+#
+#   attacker-mn  -> role=attacker  (Host-1)   origin of the lateral movement
+#   relay-mn     -> role=target    (Host-2)   first hop; then connects ONWARD
+#   target-db    -> role=target    (Host-2)   final hop (internal DB)
+#
+# Label the nodes first (once):
+#   kubectl label node host1 role=attacker --overwrite
+#   kubectl label node host2 role=target   --overwrite
+#
+# Detection (all source-side, tcp_v4_connect):
+#   C1: attacker-mn -> a boutique/DB ClusterIP whose pod is on Host-2
+#       => Host-1 agent fires cross-namespace-connect; Host-2 agent does NOT.
+#   C2 (multi-hop L3): attacker-mn -> relay-mn (leg1, seen by Host-1 agent),
+#       then relay-mn -> internal-db (leg2, seen by Host-2 agent). Neither agent
+#       sees the whole chain -> stitch_multinode.py joins them.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: attacker-mn
+  labels:
+    role: attacker
+    scenario: lateral-mn
+spec:
+  nodeSelector:
+    role: attacker            # pin to Host-1
+  containers:
+    - name: attacker-mn
+      image: nicolaka/netshoot   # nmap/nc/curl pre-installed (no runtime apt)
+      command: ["sleep", "infinity"]
+  restartPolicy: Never
+---
+# First hop. A compromised internal service the attacker pivots THROUGH: it
+# receives the inbound connect, then itself connects onward to the DB. Kept as a
+# plain netshoot pod so the attack script can drive its onward connect via exec.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: relay-mn
+  labels:
+    role: target
+    app: relay-mn
+    scenario: lateral-mn
+spec:
+  nodeSelector:
+    role: target              # pin to Host-2 (DIFFERENT kernel from attacker)
+  containers:
+    - name: relay-mn
+      image: nicolaka/netshoot
+      command: ["sleep", "infinity"]
+      ports:
+        - containerPort: 8080
+  restartPolicy: Never
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: relay-mn
+spec:
+  selector:
+    app: relay-mn
+  ports:
+    - port: 8080
+      targetPort: 8080
+---
+# Final hop: the internal "database" target, also on Host-2.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: target-db
+  labels:
+    role: target
+    app: internal-db
+    scenario: lateral-mn
+spec:
+  nodeSelector:
+    role: target              # pin to Host-2
+  containers:
+    - name: target-db
+      image: postgres:15-alpine
+      env:
+        - name: POSTGRES_PASSWORD
+          value: "labonly"
+      ports:
+        - containerPort: 5432
+  restartPolicy: Never
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: internal-db
+spec:
+  selector:
+    app: internal-db
+  ports:
+    - port: 5432
+      targetPort: 5432
