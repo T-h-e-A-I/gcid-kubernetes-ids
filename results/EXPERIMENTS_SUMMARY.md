@@ -12,6 +12,19 @@ workload. All raw metrics under `results/<name>/metrics_*.json`. CIs are Wilson 
 | Falco other scenarios | 7/8 at 100% (every single-action escape + visible connect) |
 | Detection latency | 544 ms mean / 1,700 ms p95; single-action ~330 ms; E2 chain 1,698 ms |
 
+## Second correlation family — E6 data-exfil (`results/run_gate6_20260621/`, `gate6_data_exfil.sh`)
+
+Added to answer the "advantage rests on one attack family" review point. A structurally distinct
+correlation-only chain: read sensitive mounted secret (`/etc/app-secrets/`) → connect to an **external**
+endpoint. Disjoint benign populations (3 config-readers that only read; 3 external-callers that only
+egress) make each constituent event non-discriminating.
+
+| Metric | Value |
+|---|---|
+| GCID detection | **90/90 = 100%** (Wilson CI [95.9%, 100%]), **0 benign FP** |
+| Falco (best per-event rules, 0.40.0 modern_ebpf) | **0 chain detections**; read-rule fires on 3 benign reader pods (92 events), connect-rule fires on 3 benign caller pods (86 events) — neither isolates the attacker |
+| Takeaway | same bounded-state read→connect primitive expresses **two** distinct families (credential abuse + data exfiltration) → mechanism generalizes, not a one-off |
+
 ## Token→API precision (the C3 precision story)
 
 | Experiment | Result | File |

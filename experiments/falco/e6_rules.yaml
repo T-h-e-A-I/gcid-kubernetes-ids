@@ -1,0 +1,25 @@
+# =============================================================================
+# e6_rules.yaml -- Falco head-to-head for E6 (data-exfil chain).
+# The BEST a competent operator can do with Falco's per-event model is two
+# separate rules, one per constituent action. Neither isolates the attacker:
+#   * the secret-read rule fires on EVERY config-reader pod (benign),
+#   * the external-connect rule fires on EVERY external-caller pod (benign).
+# Falco has NO operator to condition on "read app-secret THEN connect external by
+# the SAME container", so it cannot express the chain -- exactly the E2 result,
+# reproduced for a second, structurally distinct correlation family.
+# =============================================================================
+
+- rule: E6 read app-secret (thesis)
+  desc: A container reads the mounted application-secret file (constituent action 1).
+  condition: evt.type in (open,openat,openat2) and evt.dir=< and container.id != host and fd.name startswith /etc/app-secrets
+  output: "E6-READ pod=%k8s.pod.name cid=%container.id file=%fd.name"
+  priority: WARNING
+  tags: [filesystem, thesis_e6]
+
+- rule: E6 external egress connect (thesis)
+  desc: A container connects outbound to a non-cluster (external) endpoint (constituent action 2).
+  condition: >
+    evt.type=connect and evt.dir=< and container.id != host
+  output: "E6-CONNECT pod=%k8s.pod.name cid=%container.id dest=%fd.sip rip=%fd.rip"
+  priority: WARNING
+  tags: [network, thesis_e6]

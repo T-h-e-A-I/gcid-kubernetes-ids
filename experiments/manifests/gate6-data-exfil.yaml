@@ -1,0 +1,125 @@
+# =============================================================================
+# gate6-data-exfil.yaml -- E6 data-exfiltration correlation scenario.
+#
+# A SECOND, structurally distinct correlation-only family (after E2 token-exfil):
+# the malicious signal is "read sensitive mounted secret THEN connect to an
+# EXTERNAL endpoint", a chain a per-event engine (Falco/Tetragon) cannot express.
+#
+# We deliberately run DISJOINT benign populations so that neither constituent
+# event discriminates the attacker:
+#   * gate6-reader  : reads the mounted Secret in a loop, NEVER egresses externally
+#                     (so a per-event "secret read" rule fires on benign pods too).
+#   * gate6-caller  : curls a PUBLIC IP in a loop, NEVER reads the Secret
+#                     (so a per-event "external connect" rule fires on benign pods too).
+#   * gate6-attacker: mounts the Secret; each trial we exec  read-secret -> curl-external
+#                     (the ONLY pod doing both -> only the correlation isolates it).
+# The external connect is a non-destructive stand-in: a TLS connect to 1.1.1.1
+# (the read->external-connect SIGNATURE) -- no secret content is sent.
+# =============================================================================
+apiVersion: v1
+kind: Secret
+metadata:
+  name: app-secrets
+  namespace: default
+type: Opaque
+stringData:
+  db-credentials: "postgres://app:S3cr3t-db-pw@db.internal:5432/appdb"
+---
+# Benign config-readers: read the mounted secret repeatedly, no external egress.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gate6-reader
+  namespace: default
+spec:
+  replicas: 3
+  selector: { matchLabels: { app: gate6-reader } }
+  template:
+    metadata: { labels: { app: gate6-reader } }
+    spec:
+      containers:
+      - name: reader
+        image: alpine:3.20
+        command: ["sh","-c"]
+        args:
+        - |
+          while true; do
+            cat /etc/app-secrets/db-credentials >/dev/null 2>&1
+            sleep 5
+          done
+        volumeMounts:
+        - { name: secret-vol, mountPath: /etc/app-secrets, readOnly: true }
+      volumes:
+      - { name: secret-vol, secret: { secretName: app-secrets } }
+---
+# Benign external-callers: curl a PUBLIC IP repeatedly, never read the secret.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gate6-caller
+  namespace: default
+spec:
+  replicas: 3
+  selector: { matchLabels: { app: gate6-caller } }
+  template:
+    metadata: { labels: { app: gate6-caller } }
+    spec:
+      containers:
+      - name: caller
+        image: curlimages/curl:8.10.1
+        command: ["sh","-c"]
+        args:
+        - |
+          while true; do
+            curl -sk --max-time 8 -o /dev/null https://1.1.1.1/ 2>&1 || true
+            sleep 6
+          done
+---
+# Attacker pods: mount the secret; each trial execs read-secret -> curl-external.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: gate6-attacker-0
+  namespace: default
+  labels: { app: gate6-attacker }
+spec:
+  containers:
+  - name: att
+    image: curlimages/curl:8.10.1
+    command: ["sh","-c","sleep 100000"]
+    volumeMounts:
+    - { name: secret-vol, mountPath: /etc/app-secrets, readOnly: true }
+  volumes:
+  - { name: secret-vol, secret: { secretName: app-secrets } }
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: gate6-attacker-1
+  namespace: default
+  labels: { app: gate6-attacker }
+spec:
+  containers:
+  - name: att
+    image: curlimages/curl:8.10.1
+    command: ["sh","-c","sleep 100000"]
+    volumeMounts:
+    - { name: secret-vol, mountPath: /etc/app-secrets, readOnly: true }
+  volumes:
+  - { name: secret-vol, secret: { secretName: app-secrets } }
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: gate6-attacker-2
+  namespace: default
+  labels: { app: gate6-attacker }
+spec:
+  containers:
+  - name: att
+    image: curlimages/curl:8.10.1
+    command: ["sh","-c","sleep 100000"]
+    volumeMounts:
+    - { name: secret-vol, mountPath: /etc/app-secrets, readOnly: true }
+  volumes:
+  - { name: secret-vol, secret: { secretName: app-secrets } }

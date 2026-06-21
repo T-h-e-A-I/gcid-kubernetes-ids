@@ -31,6 +31,7 @@ Falco 0.40.0 (modern-eBPF); Tetragon (Cilium Helm chart); BCC for the agent. (Ke
 - **Token→API precision + cold-start fix (§6.3.1):** `experiments/gate1c_realistic_fpr.sh`.
 - **Adaptive-adversary dwell curve (§6.6):** `experiments/gate3_dwell_sweep.sh`.
 - **Window–precision frontier (§6.8):** `experiments/gate4_window_roc.sh` (with/without `ALLOW=`).
+- **E6 data-exfil (second correlation scenario):** `experiments/gate6_data_exfil.sh` (manifest `manifests/gate6-data-exfil.yaml`); Falco contrast in `experiments/falco/run_e6_falco_contrast.sh` with `falco/e6_rules.yaml`.
 - **Overhead / scalability (§6.5, §6.8):** `experiments/run_overhead_3way.sh`, `run_b3_scalability.sh`.
 - **Cross-node (§6.9):** `experiments/run_multinode_overnight.sh` (`<HOST2_IP>` = the worker node).
 

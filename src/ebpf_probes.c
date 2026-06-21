@@ -171,6 +171,9 @@ static inline int interesting_open(const char *fn) {
     if (startswith(fn, "/var/lib/kubelet", 16)) return 1;
     if (startswith(fn, "/etc/kubernetes/pki", 19)) return 1;
     if (startswith(fn, "/proc", 5) && contains_ns(fn)) return 1; // ns switch
+#ifdef DATA_EXFIL
+    if (startswith(fn, "/etc/app-secrets", 16)) return 1;     // E6 sensitive data mount
+#endif
     return 0;
 }
 
@@ -197,6 +200,25 @@ static inline int in_cluster(u32 net_order_addr) {
     if ((d & POD_MASK) == POD_NET) return 1;
     if ((d & SVC_MASK) == SVC_NET) return 1;
     return 0;
+}
+
+// is_global_v4 -- true if a network-order IPv4 is a public (globally routable)
+// address: NOT private (10/8, 172.16/12, 192.168/16), loopback (127/8),
+// link-local (169.254/16), zero, or multicast/reserved (>=224). Used (E6) so the
+// data-exfil rule can see a sensitive-read container's EXTERNAL egress while the
+// in-cluster CIDR filter still drops internal service-mesh chatter.
+static inline int is_global_v4(u32 net_order_addr) {
+    u32 d = to_host(net_order_addr);
+    u32 a = (d >> 24) & 0xff;
+    u32 b = (d >> 16) & 0xff;
+    if (a == 10) return 0;
+    if (a == 172 && b >= 16 && b <= 31) return 0;
+    if (a == 192 && b == 168) return 0;
+    if (a == 127) return 0;
+    if (a == 169 && b == 254) return 0;
+    if (a == 0) return 0;
+    if (a >= 224) return 0;
+    return 1;
 }
 
 // 1. execve
@@ -330,7 +352,14 @@ int kprobe__tcp_v4_connect(struct pt_regs *ctx, struct sock *sk,
     bpf_probe_read_kernel(&daddr, sizeof(daddr), &sin->sin_addr.s_addr);
     bpf_probe_read_kernel(&dport, sizeof(dport), &sin->sin_port);
 
+#ifdef DATA_EXFIL
+    // E6: keep cluster traffic AND public egress (rare in this workload); drop
+    // only loopback/link-local/other-private. Lets the data-exfil chain see the
+    // sensitive-read container's external connect.
+    if (!in_cluster(daddr) && !is_global_v4(daddr)) return 0;
+#else
     if (!in_cluster(daddr)) return 0;                    // drop external chatter
+#endif
 
     event->daddr = daddr;         // network byte order (decoded in user space)
     event->dport = ntohs(dport);

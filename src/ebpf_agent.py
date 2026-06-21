@@ -147,6 +147,23 @@ RUNTIME_COMMS = ("runc", "containerd", "containerd-shim", "systemd",
 # reaches the Kube-API within this window is flagged as a token-exfil chain.
 TOKEN_EXFIL_WINDOW_S = 60.0
 
+# -----------------------------------------------------------------------------
+# Data-exfiltration chain (E6) -- a SECOND, structurally distinct correlation
+# family on the same bounded-state primitive. A container that reads a sensitive
+# mounted data file (a Secret/credential volume) and then connects OUTBOUND to
+# an EXTERNAL (public, non-cluster) endpoint within DATA_EXFIL_WINDOW_S is
+# flagged as `data-exfil`. Like the token read, the sensitive read is NOT
+# alerted on its own (benign config-reader pods read mounted secrets routinely),
+# and the external connect is NOT alerted on its own (benign pods call external
+# APIs); only the CORRELATION (this cgroup read sensitive data THEN shipped it
+# out) is attacker-specific -- a chain Falco/Tetragon per-event rules cannot
+# express without firing on every legitimate reader or caller.
+DATA_EXFIL_WINDOW_S = 60.0
+SENSITIVE_DATA_PREFIXES = [
+    b"/etc/app-secrets/",
+    b"/var/run/secrets/app/",
+]
+
 # Bind mounts the kernel/runtime legitimately injects into every container.
 # Excluded from the file-boundary rule to suppress false positives
 # (Chen et al. whitelist).
@@ -449,8 +466,10 @@ class DetectionEngine:
     """
 
     def __init__(self, pod_cidr, svc_cidr, kube_api, metrics, resolver,
-                 node_name=None, token_api_allowlist=None, token_window=None):
+                 node_name=None, token_api_allowlist=None, token_window=None,
+                 data_window=None):
         self.token_window = float(token_window) if token_window else TOKEN_EXFIL_WINDOW_S
+        self.data_window = float(data_window) if data_window else DATA_EXFIL_WINDOW_S
         self.pod_cidr = ipaddress.ip_network(pod_cidr)
         self.svc_cidr = ipaddress.ip_network(svc_cidr)
         self.kube_api = kube_api
@@ -475,6 +494,11 @@ class DetectionEngine:
         # by container (not pid) so a token read by one process and the Kube-API
         # call by another in the same container correlate (re-posed E2).
         self.token_read_cg = {}
+        # cgroup_id -> timestamp of last SENSITIVE-DATA file read by that
+        # container (E6 data-exfil chain). Same per-container keying as the token
+        # map so a read by one process and the external connect by another in the
+        # same container correlate.
+        self.sensitive_read_cg = {}
         # (pid, rule, detail) -> last-emitted ts, for alert de-duplication.
         self._dedup = {}
         # Time source. In LIVE mode this stays None and now() returns the wall
@@ -569,6 +593,11 @@ class DetectionEngine:
         # call from the same container becomes a token-exfil chain (re-posed E2).
         if any(t in path_b for t in TOKEN_PATHS):
             self.token_read_cg[cgroup_id] = self.now()
+        # Sensitive-data read (E6): record per-container so a later EXTERNAL
+        # connect by the same container becomes a data-exfil chain. Not alerted
+        # on its own -- benign config-reader pods read mounted secrets routinely.
+        elif any(p in path_b for p in SENSITIVE_DATA_PREFIXES):
+            self.sensitive_read_cg[cgroup_id] = self.now()
         elif self._is_host_path(path_b) and not comm.startswith(RUNTIME_COMMS):
             # Exclude the container runtime/init: runc:[2:INIT] legitimately
             # reads /host/sys/fs/cgroup during pod setup -- those were ~70 false
@@ -700,6 +729,21 @@ class DetectionEngine:
             self._alert("LATERAL", "cross-namespace-connect", pid, comm,
                         detail="%s:%d (src_ns=%s dst_ns=%s)"
                                % (ip, port, src_ns or "?", dst_ns or "?"))
+        elif addr.is_global:
+            # External egress. Data-exfil chain (E6, a SECOND correlation family):
+            # this CONTAINER read a sensitive mounted secret shortly before
+            # shipping data to an EXTERNAL endpoint. The external connect is rare-
+            # benign on its own (some pods call external APIs) and the sensitive
+            # read is benign on its own (config-reader pods), so neither alerts
+            # alone; only the read->external-connect correlation by the SAME
+            # cgroup within the window is attacker-specific -- a chain a per-event
+            # engine (Falco/Tetragon) cannot express. Mirrors the token-exfil
+            # primitive on a distinct (file-class, destination-class) pair.
+            t = self.sensitive_read_cg.get(cgroup_id)
+            if t and (self.now() - t) <= self.data_window:
+                self._alert("EXFIL", "data-exfil", pid, comm,
+                            detail="sensitive-read container -> external %s:%d"
+                                   % (ip, port), severity="critical")
 
     # ---- alerting / metrics --------------------------------------------------
     def _alert(self, category, rule, pid, comm, detail="", severity="alert"):
@@ -958,6 +1002,10 @@ def parse_args():
                    help="token-read->Kube-API correlation window in seconds "
                         "(default 60). Wider catches slower chains but retains "
                         "more per-cgroup state; used for the window-ROC sweep.")
+    p.add_argument("--data-window", type=float,
+                   default=float(os.environ.get("DATA_WINDOW", "0") or 0),
+                   help="sensitive-read->external-connect correlation window in "
+                        "seconds for the data-exfil chain (E6, default 60).")
     p.add_argument("--metrics",
                    default=os.environ.get("METRICS_FILE", "alerts.jsonl"),
                    help="path to write structured alert JSONL")
@@ -1061,7 +1109,8 @@ def main():
     engine = DetectionEngine(args.pod_cidr, args.svc_cidr, args.kube_api,
                              metrics, resolver, node_name=args.node_name,
                              token_api_allowlist=_allow,
-                             token_window=args.token_window or None)
+                             token_window=args.token_window or None,
+                             data_window=args.data_window or None)
     if _allow:
         print("Token-API allowlist   : %s" % ", ".join(_allow))
 
@@ -1093,6 +1142,14 @@ def main():
         "-DSVC_NET=%dU" % int(svc.network_address),
         "-DSVC_MASK=%dU" % int(svc.netmask),
     ]
+    # E6 data-exfil: only when --data-window is active, widen the in-kernel
+    # filter to also submit (a) reads of the sensitive-data mount prefix and
+    # (b) EXTERNAL (public) egress connects, so the read->external-connect chain
+    # is observable. Gated by a cflag so the DEFAULT probe stays byte-identical
+    # to the canonical run (no /etc/app-secrets reads or public egress occur in
+    # the Online Boutique workload, so this is inert there regardless).
+    if getattr(args, "data_window", 0):
+        cflags.append("-DDATA_EXFIL=1")
     b = BPF(src_file=args.probes, cflags=cflags)
     b.attach_kprobe(event=b.get_syscall_fnname("execve"),
                     fn_name="syscall__execve")

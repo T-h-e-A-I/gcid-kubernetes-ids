@@ -1,0 +1,15 @@
+{
+  "experiment": "GATE 6 -- E6 data-exfil correlation (read sensitive secret -> external connect)",
+  "family": "data-exfiltration (distinct from E2 credential-exfil): same bounded-state read->connect primitive on a (sensitive-file, external-destination) pair",
+  "trials": 90,
+  "detections": 90,
+  "detection_rate": 1.0,
+  "detection_ci95_wilson": [
+    0.9591,
+    1.0
+  ],
+  "benign_false_positives": 0,
+  "benign_populations": "3 config-readers (read secret, no egress) + 3 external-callers (egress, no read) -- disjoint, so neither constituent event discriminates; only the correlation does",
+  "total_data_exfil_alerts": 90,
+  "verdict": "DETECTED: read->external-connect chain isolates the attacker; benign disjoint populations produce 0 FP"
+}

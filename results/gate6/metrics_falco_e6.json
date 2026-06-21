@@ -1,0 +1,13 @@
+{
+  "experiment": "E6 Falco head-to-head (data-exfil chain), Falco 0.40.0 modern-bpf, custom per-event rules",
+  "attacker_trials": 20,
+  "falco_chain_detections": 0,
+  "reason": "Falco's per-event model has no temporal cross-event operator: it cannot express 'read app-secret THEN connect external by the same container'. The two constituent rules each fire on a DISJOINT benign population, so neither isolates the attacker.",
+  "read_rule_total_fires": 92,
+  "read_rule_benign_reader_pods_fired": 3,
+  "read_rule_also_fired_on_attacker_pods": 3,
+  "connect_rule_total_fires": 86,
+  "connect_rule_benign_caller_pods_fired": 3,
+  "connect_rule_also_fired_on_attacker_pods": 3,
+  "verdict": "Falco CANNOT express the E6 chain (0 chain detections); its per-event proxies fire on 3 benign reader pods and 3 benign caller pods -- unusable as a chain detector. GCID detects the same chain at 100% with 0 FP (metrics_gate6.json)."
+}

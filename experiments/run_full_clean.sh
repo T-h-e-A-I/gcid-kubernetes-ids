@@ -26,7 +26,7 @@ export PATH="/usr/local/bin:/usr/bin:/bin:$PATH"
 # Under systemd we already run as root -> no sudo needed (and sudo without a tty
 # can fail). Interactively (non-root) keep sudo.
 if [ "$(id -u)" = "0" ]; then SUDO=""; else SUDO="sudo"; fi
-POD_CIDR=$(kubectl get node ubuntu-s-4vcpu-8gb-blr1 -o jsonpath='{.spec.podCIDR}')
+POD_CIDR=$(kubectl get node <NODE> -o jsonpath='{.spec.podCIDR}')
 
 echo "[$(date +%T)] ensuring leftover Falco is stopped (A7 contamination)"
 $SUDO systemctl stop falco-modern-bpf.service falcoctl-artifact-follow.service 2>/dev/null || true
