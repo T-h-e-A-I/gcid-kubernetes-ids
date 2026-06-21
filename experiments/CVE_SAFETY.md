@@ -29,9 +29,8 @@ works on a current, patched system.
 
 - The exploits run **locally**; nothing is transmitted or published. There is no internet "release."
 - A successful escape grants host code-exec **to the payload we write** — and our payloads only
-  read a host file / `touch` a marker. They **never** read or exfiltrate host secrets. The one
-  sensitive file on this host is `host credential files`; the payloads do not touch it, and the techniques
-  have no interest in it.
+  read a host file / `touch` a marker. They **never** read or exfiltrate host secrets; the payloads
+  do not touch any credential files on the host, and the techniques have no interest in them.
 - Detection fires on the **syscall behavior**, so we deliberately keep the destructive end harmless.
 
 ## Built-in safeguards (in the script)
@@ -44,18 +43,18 @@ works on a current, patched system.
    handled.)
 4. **Cleanup** removes the payload + markers and unmounts.
 
-## Pre-run checklist (operator)
+## Pre-run checklist
 
-- [ ] **Take a DigitalOcean VM snapshot** (one-click rollback if anything misbehaves).
-- [ ] Consolidated detection rerun has **finished** (don't collide on the cluster/agent).
-- [ ] eBPF agent is running and writing `alerts.jsonl`.
-- [ ] Run: `CONFIRM_DETONATE=yes GROUND_TRUTH=results/ground_truth_cve.jsonl ./experiments/attack_cve.sh`
-- [ ] After: confirm `core_pattern` restored (`cat /proc/sys/kernel/core_pattern`), markers gone,
-      no leftover mounts (`mount | grep hostdisk`).
-- [ ] Score: confirm C1 → `privileged-mount`, C2 → `file-boundary` in the alerts.
+1. **Take a VM snapshot** (one-click rollback if anything misbehaves).
+2. Ensure no other run is using the cluster/agent.
+3. Confirm the eBPF agent is running and writing `alerts.jsonl`.
+4. Run: `CONFIRM_DETONATE=yes GROUND_TRUTH=results/ground_truth_cve.jsonl ./experiments/attack_cve.sh`
+5. After: confirm `core_pattern` restored (`cat /proc/sys/kernel/core_pattern`), markers gone,
+   no leftover mounts (`mount | grep hostdisk`).
+6. Score: confirm C1 → `privileged-mount`, C2 → `file-boundary` in the alerts.
 
-## Artifact-release note (B5)
+## Note on scope
 
-Publishing PoCs for already-public, patched issues is standard security-research practice. To stay
-clean, the **public artifact repo ships the detection agent + non-destructive reproductions and
-*describes* these escape tests** — it does not need to ship weaponized exploit code.
+Publishing PoCs for already-public, patched issues is standard security-research practice. This
+artifact ships the detection agent plus non-destructive reproductions and *describes* these escape
+tests; it does not ship weaponized exploit code.

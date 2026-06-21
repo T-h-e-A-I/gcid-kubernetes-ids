@@ -45,4 +45,4 @@ SIEM pipeline can correlate off-host, and we do not claim otherwise.
 `experiments/CVE_SAFETY.md`. Run only on a disposable VM with a snapshot.
 
 ## License
-Research artifact — add your preferred license (e.g., Apache-2.0 / MIT) before public release.
+Released under the MIT License. See [LICENSE](LICENSE).
