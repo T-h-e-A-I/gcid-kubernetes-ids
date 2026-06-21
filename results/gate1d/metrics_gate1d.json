@@ -1,0 +1,13 @@
+{
+  "experiment": "GATE 1d -- high-N attacker recall, token-exfil chain under allowlist config",
+  "trials": 90,
+  "detections": 90,
+  "detection_rate": 1.0,
+  "detection_ci95_wilson": [
+    0.9591,
+    1.0
+  ],
+  "benign_token_exfil_false_positives": 0,
+  "note": "allowlist ON (4 benign client SAs + system SAs); attacker = non-allowlisted default SA",
+  "verdict": "RECALL CONFIRMED at scale: 90/90 attacker chains detected, 0 benign FP"
+}

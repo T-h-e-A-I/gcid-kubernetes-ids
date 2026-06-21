@@ -12,6 +12,27 @@ workload. All raw metrics under `results/<name>/metrics_*.json`. CIs are Wilson 
 | Falco other scenarios | 7/8 at 100% (every single-action escape + visible connect) |
 | Detection latency | 544 ms mean / 1,700 ms p95; single-action ~330 ms; E2 chain 1,698 ms |
 
+## High-N attacker recall — token-exfil chain (`results/run_gate1d_20260621/`, `gate1d_attacker_recall.sh`)
+
+Closes the under-sampled 12/12 attacker figure with a CI matching the FPR's rigor. Allowlist ON
+(4 benign client SAs + system SAs); non-allowlisted attacker drives token-read→kube-API N=90 tight trials.
+
+| Metric | Value |
+|---|---|
+| Attacker detection | **90/90 = 100%** (Wilson CI [95.9%, 100%]) |
+| Benign token-exfil FP | **0** |
+| Takeaway | recall side now carries a CI comparable to the 0.55% FPR — both sides of the precision/recall trade quantified |
+
+## Deployment-gap evidence (§6.3.1) — preventive controls commonly absent (verified sources)
+
+| Claim | Evidence |
+|---|---|
+| SA token auto-mounted by default | Kubernetes docs (opt-out only) |
+| Token left mounted in practice | our survey, `results/helm_automount_survey.md`: 16/20 popular charts mount by default |
+| NetworkPolicies commonly absent | Bufalino et al. 2025 (peer-reviewed ACM): 241/287 = **84%** of apps lack any network policy; Fairwinds 2024 (330k+ workloads): only **37%** of orgs have one |
+| Over-permissive SAs common | Sysdig 2023: **90%** of granted permissions unused |
+| Egress-specific default-deny | no published figure — stated qualitatively (strict subset of an already-rare control) |
+
 ## Second correlation family — E6 data-exfil (`results/run_gate6_20260621/`, `gate6_data_exfil.sh`)
 
 Added to answer the "advantage rests on one attack family" review point. A structurally distinct
